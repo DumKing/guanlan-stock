@@ -1,0 +1,7 @@
+node_modules/
+/release/
+/data/
+/.cache/
+/.npm-cache/
+/screenshots/
+.DS_Store

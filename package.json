@@ -1,0 +1,24 @@
+{
+  "name": "stock-studio",
+  "productName": "观澜股票",
+  "version": "0.1.4",
+  "description": "个人 A 股行情与条件选股桌面工作台",
+  "main": "desktop.cjs",
+  "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "start": "electron .",
+    "preview": "node server.cjs",
+    "test": "node --test tests/*.test.cjs",
+    "package": "electron-packager . 观澜股票 --platform=darwin --app-bundle-id=com.tiamo.guanlan --icon=assets/icon.icns --out=release --overwrite --asar --ignore='^/(release|tests|data|.cache|.npm-cache|screenshots)(/|$)'",
+    "web:build": "node scripts/build-pages.cjs",
+    "web:collect": "node scripts/collect-web-data.cjs",
+    "web:deploy": "node scripts/deploy-pages.cjs"
+  },
+  "devDependencies": {
+    "electron": "45.1.0",
+    "@electron/packager": "20.3.0"
+  }
+}
