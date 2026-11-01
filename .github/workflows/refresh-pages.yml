@@ -1,0 +1,78 @@
+name: Refresh market data and deploy Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      history:
+        description: Refresh all daily price history (slower)
+        type: boolean
+        default: false
+  schedule:
+    # UTC. Asia/Shanghai = UTC+8. Weekdays, 09:30–11:30 and 13:00–15:00.
+    - cron: '30,45 1 * * 1-5'
+    - cron: '*/15 2 * * 1-5'
+    - cron: '0,15,30 3 * * 1-5'
+    - cron: '*/15 5-6 * * 1-5'
+    - cron: '0 7 * * 1-5'
+    # 16:35 China time: refresh daily bars after the market closes.
+    - cron: '35 8 * * 1-5'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: guanlan-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Restore public market cache
+        id: cache
+        uses: actions/cache/restore@v6
+        with:
+          path: data
+          key: public-market-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            public-market-v1-
+      - name: Verify application
+        run: npm test
+      - name: Refresh market, indices and ETF reports
+        if: github.event.schedule != '35 8 * * 1-5' && inputs.history != true
+        run: npm run web:collect
+      - name: Refresh market and full daily history after close
+        if: github.event.schedule == '35 8 * * 1-5' || inputs.history == true
+        run: npm run web:collect -- --history
+      - name: Build browser data and website
+        run: npm run web:build
+      - name: Preserve public market cache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: data
+          key: public-market-v1-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Upload Pages website
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish website
+        id: deployment
+        uses: actions/deploy-pages@v4
